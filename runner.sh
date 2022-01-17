@@ -28,8 +28,10 @@ echo "run $RNUNNE and write in $PREF"
 mkdir $PREF
 
 for i in $(seq $N); do
+    mkdir $PREF/$i
     echo ""
     echo -e "\e[96mrun $i\e[0m"
     echo -e "\e[36m======\e[0m"
-    time $RNUNNE $PREF/$i;
+    time $RNUNNE $PREF/$i/$i;
+    cp ../matching-engine-haskell/dist/GetTCTraces.tix $PREF/$i
 done

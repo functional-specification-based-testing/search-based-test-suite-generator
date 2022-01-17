@@ -9,7 +9,6 @@ from geneticalgorithm import geneticalgorithm as ga
 
 from haskell_adaptor import ArrayDecoder, save_test_suite_feed, get_coverage
 
-
 MAX_PRICE = 10
 MAX_QTY = 10
 MAX_MODAL_QTY = 3
@@ -25,9 +24,8 @@ MAX_SHARE = 20
 
 VERBOSE = False
 
-
 algorithm_param = {
-    'max_num_iteration': 1,
+    'max_num_iteration': 1000,
     'population_size': 100,
     'mutation_probability': 0.1,
     'elit_ratio': 0.01,
@@ -45,7 +43,7 @@ def main():
         covered_stmts = set(chain(*traces))
         # score = 5 * len(covered_stmts) - 1 * ts_size
         coverage = get_coverage()
-        score = coverage.branch
+        score = int(coverage.branch) + int(coverage.statement) + int(coverage.expression)
         if VERBOSE:
             print(ts_size, len(covered_stmts), score)
         return int(score)
@@ -57,35 +55,40 @@ def main():
     decoder = ArrayDecoder(BROKER_NUMBERS, SHAREHOLDER_NUMBERS, ORD_ENCODED_SIZE, MAX_TC_SIZE, MAX_TS_SIZE)
 
     varbound = np.array((
-        [(0, 1)]
-        + [(MIN_CREDIT, MAX_CREDIT)] * BROKER_NUMBERS
-        + [(MIN_SHARE, MAX_SHARE)] * SHAREHOLDER_NUMBERS
-        + [(0, MAX_PRICE)]  # reference price
-        + [
-            (0, MAX_TC_SIZE*3-1),  # order ID
-            (1, BROKER_NUMBERS),  # broker ID
-            (1, SHAREHOLDER_NUMBERS),  # shareholder ID
-            (0, MAX_PRICE),  # price
-            (0, MAX_QTY),  # quantity
-            (0, 1),  # side (is BUY)
-            (0, MAX_MODAL_QTY),  # minimum quantity
-            (0, 1),  # FAK (is FAK)
-            (0, MAX_MODAL_QTY),  # disclosed quantitys
-        ] * MAX_TC_SIZE
-    ) * MAX_TS_SIZE)
+                                [(0, 1)]
+                                + [(MIN_CREDIT, MAX_CREDIT)] * BROKER_NUMBERS
+                                + [(MIN_SHARE, MAX_SHARE)] * SHAREHOLDER_NUMBERS
+                                + [(0, MAX_PRICE)]  # reference price
+                                + [
+                                    (0, MAX_TC_SIZE * 3 - 1),  # order ID
+                                    (1, BROKER_NUMBERS),  # broker ID
+                                    (1, SHAREHOLDER_NUMBERS),  # shareholder ID
+                                    (0, MAX_PRICE),  # price
+                                    (0, MAX_QTY),  # quantity
+                                    (0, 1),  # side (is BUY)
+                                    (0, MAX_MODAL_QTY),  # minimum quantity
+                                    (0, 1),  # FAK (is FAK)
+                                    (0, MAX_MODAL_QTY),  # disclosed quantitys
+                                ] * MAX_TC_SIZE
+                        ) * MAX_TS_SIZE)
     model = ga(function=lambda x: -fitness(x), dimension=(MAX_TS_SIZE * decoder.tc_encoded_size),
                variable_type='int', variable_boundaries=varbound,
                convergence_curve=False,
                algorithm_parameters=algorithm_param
                )
 
-    best_variable, best_function, report = model.run()
+    model.run()
 
-    print("")
+    best_variable = model.output_dict.get('variable')
+    best_function = model.output_dict.get('function')
+
+    # best_variable, best_function, report =
+
+    # print("")
     ts = decoder.decode_ts(best_variable)
     print("%d tests" % len(ts))
     print("%d stmts" % len(set(chain(*map(lambda tc: tc.traces, ts)))))
-    print("report: %s" % report)
+    # print("report: %s" % report)
     print("\n\n".join(map(lambda tc: repr(tc), ts)))
     save_test_suite_feed(ts, argv[1])
 
