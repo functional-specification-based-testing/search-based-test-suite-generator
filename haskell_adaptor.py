@@ -205,7 +205,7 @@ def get_coverage():
     coverage.expression = ec[0]
     sc = re.findall(r"(\d+)% alternatives", str(output))
     coverage.statement = sc[0]
-    # print(vars(coverage).items())
+    print(vars(coverage).items())
     return coverage
 
 
