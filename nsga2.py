@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import pathlib
 
 import numpy as np
 from pymoo.algorithms.moo.nsga2 import NSGA2
@@ -7,7 +8,7 @@ from pymoo.factory import get_sampling, get_crossover, get_mutation
 from pymoo.factory import get_termination
 from pymoo.optimize import minimize
 
-from haskell_adaptor import ArrayDecoder, get_coverage
+from haskell_adaptor import ArrayDecoder, get_coverage, save_test_suite_feed
 
 MAX_PRICE = 10
 MAX_QTY = 10
@@ -67,6 +68,9 @@ lowerbound = np.array \
 # print(lowerbound)
 
 
+decoder = ArrayDecoder(BROKER_NUMBERS, SHAREHOLDER_NUMBERS, ORD_ENCODED_SIZE, MAX_TC_SIZE, MAX_TS_SIZE)
+
+
 class ProblemSpecification(ElementwiseProblem):
     def __init__(self):
         super().__init__(
@@ -78,7 +82,6 @@ class ProblemSpecification(ElementwiseProblem):
         )
 
     def _evaluate(self, x, out, *args, **kwargs):
-        decoder = ArrayDecoder(BROKER_NUMBERS, SHAREHOLDER_NUMBERS, ORD_ENCODED_SIZE, MAX_TC_SIZE, MAX_TS_SIZE)
         traces = list(map(lambda tc: tc.traces, decoder.decode_ts(x)))
         ts_size = len(traces)
         # print(x)
@@ -95,11 +98,16 @@ algorithm = NSGA2(
     eliminate_duplicates=True
 )
 
-termination = get_termination("n_gen", 10)
+termination = get_termination("n_gen", 1)
 res = minimize(ProblemSpecification(),
                algorithm,
                termination,
                seed=1,
                save_history=True,
                verbose=True)
-print(res.opt)
+
+pathlib.Path("nsga2/").mkdir(parents=True, exist_ok=True)
+for i in range(len(res.X)):
+    ts = decoder.decode_ts(res.X[i])
+    print(res.F[i])
+    save_test_suite_feed(ts, "nsga2/nsga2-" + str(i) + ".out")

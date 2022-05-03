@@ -1,6 +1,7 @@
 *.in
 sa
 ga
+nsga2
 
 ### Python ###
 
