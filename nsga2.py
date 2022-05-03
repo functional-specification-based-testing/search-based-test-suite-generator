@@ -64,14 +64,14 @@ lowerbound = np.array \
         ) * MAX_TS_SIZE
     )
 
-print(lowerbound)
+# print(lowerbound)
 
 
 class ProblemSpecification(ElementwiseProblem):
     def __init__(self):
         super().__init__(
             n_var=4280,
-            n_obj=3,
+            n_obj=2,
             n_constr=0,
             xl=lowerbound,
             xu=upperbound
@@ -80,17 +80,18 @@ class ProblemSpecification(ElementwiseProblem):
     def _evaluate(self, x, out, *args, **kwargs):
         decoder = ArrayDecoder(BROKER_NUMBERS, SHAREHOLDER_NUMBERS, ORD_ENCODED_SIZE, MAX_TC_SIZE, MAX_TS_SIZE)
         traces = list(map(lambda tc: tc.traces, decoder.decode_ts(x)))
-        print(x)
+        ts_size = len(traces)
+        # print(x)
         coverage = get_coverage()
-        out["F"] = [-int(coverage.expression), -int(coverage.branch), -int(coverage.statement)]
+        out["F"] = [-int(coverage.expression), ts_size]
 
 
 algorithm = NSGA2(
     pop_size=100,
-    n_offsprings=50,
-    sampling=get_sampling("real_random"),
-    crossover=get_crossover("real_sbx", prob=0.5, eta=15),
-    mutation=get_mutation("real_pm", eta=20),
+    n_offsprings=100,
+    sampling=get_sampling("int_random"),
+    crossover=get_crossover("int_sbx", prob=0.5, eta=15),
+    mutation=get_mutation("int_pm", eta=20),
     eliminate_duplicates=True
 )
 

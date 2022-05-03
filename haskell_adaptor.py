@@ -8,7 +8,7 @@ TRACE_FEDD_ADDR = "./GetTCTraces --trades "
 COVERAGE_ADDR = "hpc report GetTCTraces"
 RESET_COVERAGE = "rm GetTCTraces.tix"
 
-WORKING_DIRECTORY = "../matching-engine-haskell/dist"
+WORKING_DIRECTORY = "../haskell-matching-engine/dist"
 
 
 @dataclass
@@ -205,7 +205,7 @@ def get_coverage():
     coverage.expression = ec[0]
     sc = re.findall(r"(\d+)% alternatives", str(output))
     coverage.statement = sc[0]
-    print(vars(coverage).items())
+    # print(vars(coverage).items())
     return coverage
 
 
