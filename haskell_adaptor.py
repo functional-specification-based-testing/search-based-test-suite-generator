@@ -2,7 +2,7 @@ import re
 import subprocess
 from dataclasses import dataclass, astuple
 
-TMP_FILE_ADDR = "/tmp/wdajdjkposlf-boolean"
+TMP_FILE_ADDR = "/tmp/wdajdjkposlf-expression"
 TRACE_CALC_ADDR = "./GetTCTraces --traces "
 TRACE_FEDD_ADDR = "./GetTCTraces --trades "
 COVERAGE_ADDR = "hpc report GetTCTraces"
@@ -173,7 +173,10 @@ class ArrayDecoder:
 
     def decode_ts(self, ts_encoded):
         process = subprocess.Popen(RESET_COVERAGE, cwd=WORKING_DIRECTORY, shell=True, stdout=subprocess.PIPE)
-        process.communicate()
+        output, error = process.communicate()
+        if error:
+            errors = open("errors.txt", "a")
+            errors.write(str(error) + "\n")
         ts = []
         for i in range(self.max_ts_size):
             is_in_idx = i * self.tc_encoded_size

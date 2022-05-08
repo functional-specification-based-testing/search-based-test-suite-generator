@@ -8,7 +8,8 @@ from pymoo.factory import get_sampling, get_crossover, get_mutation
 from pymoo.factory import get_termination
 from pymoo.optimize import minimize
 
-from haskell_adaptor import ArrayDecoder, get_coverage, save_test_suite_feed
+from haskell_adaptor import ArrayDecoder, get_coverage, save_test_suite_feed, gen_test_suite_feed
+from main import Testcase, check_all_isps, isp_list
 
 MAX_PRICE = 10
 MAX_QTY = 10
@@ -82,11 +83,39 @@ class ProblemSpecification(ElementwiseProblem):
         )
 
     def _evaluate(self, x, out, *args, **kwargs):
+        # try:
         traces = list(map(lambda tc: tc.traces, decoder.decode_ts(x)))
         ts_size = len(traces)
-        # print(x)
-        coverage = get_coverage()
-        out["F"] = [-int(coverage.expression), ts_size]
+        # print(gen_test_suite_feed(decoder.decode_ts(x))[0])
+
+        isp_dic = {}
+        for isp in isp_list:
+            isp_dic[isp.__name__] = False
+
+        test_suite = decoder.decode_ts(x)
+        for case in test_suite:
+            testcase = case.gen_test_case_feed().split("\n")
+            # print(testcase)
+            test_case = Testcase()
+            test_case.parse(testcase)
+            isps = check_all_isps(test_case)
+            for key, value in isp_dic.items():
+                isp_dic[key] = isps[key] | value
+        print(isp_dic)
+
+        score = sum(1 for c in isp_dic.values() if c)
+        # print(score)
+
+        if ts_size == 0:
+            out["F"] = [1, 1]
+        else:
+            coverage = get_coverage()
+            out["F"] = [-int(coverage.expression), -score]
+    # except BaseException as error:
+    #     with open("run-temp.txt", "w") as file:
+    #         file.write(", ".join(str(item) for item in x))
+    #         file.write("-----------------------------------------------------------------------------------\n")
+    #     print(error)
 
 
 algorithm = NSGA2(
@@ -98,7 +127,7 @@ algorithm = NSGA2(
     eliminate_duplicates=True
 )
 
-termination = get_termination("n_gen", 1)
+termination = get_termination("n_gen", 10)
 res = minimize(ProblemSpecification(),
                algorithm,
                termination,
@@ -109,5 +138,5 @@ res = minimize(ProblemSpecification(),
 pathlib.Path("nsga2/").mkdir(parents=True, exist_ok=True)
 for i in range(len(res.X)):
     ts = decoder.decode_ts(res.X[i])
-    print(res.F[i])
+    print(str(i) + str(res.F[i]))
     save_test_suite_feed(ts, "nsga2/nsga2-" + str(i) + ".out")

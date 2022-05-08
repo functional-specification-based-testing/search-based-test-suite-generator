@@ -3,6 +3,8 @@ sa
 ga
 nsga2
 
+run-temp.txt
+
 ### Python ###
 
 # Byte-compiled / optimized / DLL files
