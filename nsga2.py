@@ -76,41 +76,66 @@ class ProblemSpecification(ElementwiseProblem):
     def __init__(self):
         super().__init__(
             n_var=4280,
-            n_obj=2,
-            n_constr=0,
+            n_obj=1,
+            n_constr=1,
             xl=lowerbound,
             xu=upperbound
         )
 
     def _evaluate(self, x, out, *args, **kwargs):
-        # try:
-        traces = list(map(lambda tc: tc.traces, decoder.decode_ts(x)))
-        ts_size = len(traces)
-        # print(gen_test_suite_feed(decoder.decode_ts(x))[0])
+
+        test_suite = decoder.decode_ts(x)
+        coverage = get_coverage()
 
         isp_dic = {}
         for isp in isp_list:
             isp_dic[isp.__name__] = False
 
-        test_suite = decoder.decode_ts(x)
-        for case in test_suite:
-            testcase = case.gen_test_case_feed().split("\n")
-            # print(testcase)
+        for testcase in test_suite:
             test_case = Testcase()
-            test_case.parse(testcase)
+            test_case.parse(testcase.test_case)
             isps = check_all_isps(test_case)
             for key, value in isp_dic.items():
                 isp_dic[key] = isps[key] | value
-        print(isp_dic)
-
         score = sum(1 for c in isp_dic.values() if c)
+
+        out["F"] = [-int(coverage.expression)]
+        out["G"] = [11 - score]
+
+        # try:
+        # traces = list(map(lambda tc: tc.traces, decoder.decode_ts(x)))
+        # ts_size = len(traces)
+        # print("##############################################################")
+        # print(traces)
+        # print("------------------------------------------------------------------------")
+
+        # isp_dic = {}
+        # for isp in isp_list:
+        #     isp_dic[isp.__name__] = False
+        #
+        # test_suite = decoder.decode_ts(x)
+        # for case in test_suite:
+        #     testcase = case.gen_test_case_feed().split("\n")
+        #     print(case.test_case)
+        # print("---------------------------")
+        # test_case = Testcase()
+        # test_case.parse(case.test_case)
+        # isps = check_all_isps(test_case)
+        # for key, value in isp_dic.items():
+        #     isp_dic[key] = isps[key] | value
+        # score = sum(1 for c in isp_dic.values() if c)
         # print(score)
 
-        if ts_size == 0:
-            out["F"] = [1, 1]
-        else:
-            coverage = get_coverage()
-            out["F"] = [-int(coverage.expression), -score]
+        # out["F"] = [-score]
+        # print(score)
+
+        # if ts_size == 0:
+        #     out["F"] = [1, 1]
+        # out["F"] = [1]
+        # else:
+        #     coverage = get_coverage()
+        #     out["F"] = [-int(coverage.expression), -score]
+        # out["F"] = [-int(coverage.expression)]
     # except BaseException as error:
     #     with open("run-temp.txt", "w") as file:
     #         file.write(", ".join(str(item) for item in x))
@@ -127,7 +152,7 @@ algorithm = NSGA2(
     eliminate_duplicates=True
 )
 
-termination = get_termination("n_gen", 10)
+termination = get_termination("n_gen", 50)
 res = minimize(ProblemSpecification(),
                algorithm,
                termination,

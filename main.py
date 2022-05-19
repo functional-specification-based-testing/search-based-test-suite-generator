@@ -100,7 +100,7 @@ def p1_1_isp(testcase: Testcase):
 
     for order in test_case_orders:
         for trade in test_case_trades:
-            if order.order_id == trade.buy_id or trade.sell_id:
+            if order.order_id == trade.buy_id or order.order_id == trade.sell_id:
                 if order.quantity == trade.quantity:
                     return True
 
@@ -113,7 +113,7 @@ def p1_2_isp(testcase: Testcase):
 
     for order in test_case_orders:
         for trade in test_case_trades:
-            if order.order_id == trade.buy_id or trade.sell_id:
+            if order.order_id == trade.buy_id or order.order_id == trade.sell_id:
                 if order.quantity < trade.quantity:
                     return True
 
@@ -128,12 +128,12 @@ def p1_3_isp(testcase: Testcase):
         trade_count = 0
         final_quantity = 0
         for trade in test_case_trades:
-            if order.order_id == trade.buy_id or trade.sell_id:
-                if order.quantity < trade.quantity:
+            if order.order_id == trade.buy_id or order.order_id == trade.sell_id:
+                if order.quantity > trade.quantity:
                     trade_count += 1
                     final_quantity += trade.quantity
 
-        if trade_count > 0 and final_quantity == order.quantity:
+        if trade_count > 1 and final_quantity == order.quantity:
             return True
 
     return False
@@ -146,7 +146,7 @@ def p1_4_isp(testcase: Testcase):
     for order in test_case_orders:
         trade_count = 0
         for trade in test_case_trades:
-            if order.order_id == trade.buy_id or trade.sell_id:
+            if order.order_id == trade.buy_id or order.order_id == trade.sell_id:
                 trade_count = + 1
 
         if trade_count == 0:
@@ -163,8 +163,8 @@ def p1_5_isp(testcase: Testcase):
         trade_count = 0
         final_quantity = 0
         for trade in test_case_trades:
-            if order.order_id == trade.buy_id or trade.sell_id:
-                if order.quantity < trade.quantity:
+            if order.order_id == trade.buy_id or order.order_id == trade.sell_id:
+                if order.quantity > trade.quantity:
                     trade_count += 1
                     final_quantity += trade.quantity
 
@@ -198,7 +198,7 @@ def p2_3_isp(testcase: Testcase):
     for order in test_case_orders:
         for in_queue in test_case_final_queue:
             if order.order_id == in_queue.order_id and order.quantity > in_queue.quantity:
-                print('p2_3:', order)
+                # print('p2_3:', order)
                 return True
 
     return False

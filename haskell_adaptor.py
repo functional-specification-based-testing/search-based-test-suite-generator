@@ -32,7 +32,8 @@ class TestCase:
         self.ords = ords
         self.translated_orders = 0
         self.translated = self._translate()
-        self.traces = self._calc_test_case_trace()
+        # self.traces = self._calc_test_case_trace()
+        self.test_case = self.gen_test_case_feed().split("\n")
 
     @staticmethod
     def _translate_new_ord(order):
