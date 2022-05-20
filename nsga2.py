@@ -10,6 +10,7 @@ from pymoo.optimize import minimize
 
 from haskell_adaptor import ArrayDecoder, get_coverage, save_test_suite_feed, gen_test_suite_feed
 from main import Testcase, check_all_isps, isp_list
+from isp_coverage import calculate_isp
 
 MAX_PRICE = 10
 MAX_QTY = 10
@@ -87,17 +88,12 @@ class ProblemSpecification(ElementwiseProblem):
         test_suite = decoder.decode_ts(x)
         coverage = get_coverage()
 
-        isp_dic = {}
-        for isp in isp_list:
-            isp_dic[isp.__name__] = False
-
+        isps = {}
         for testcase in test_suite:
             test_case = Testcase()
             test_case.parse(testcase.test_case)
-            isps = check_all_isps(test_case)
-            for key, value in isp_dic.items():
-                isp_dic[key] = isps[key] | value
-        score = sum(1 for c in isp_dic.values() if c)
+            isps = calculate_isp(test_case)
+        score = sum(1 for c in isps.values() if c)
 
         out["F"] = [-int(coverage.expression)]
         out["G"] = [11 - score]
