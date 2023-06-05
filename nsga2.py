@@ -77,8 +77,8 @@ class ProblemSpecification(ElementwiseProblem):
     def __init__(self):
         super().__init__(
             n_var=4280,
-            n_obj=1,
-            n_constr=1,
+            n_obj=2,
+            n_constr=0,
             xl=lowerbound,
             xu=upperbound
         )
@@ -95,8 +95,8 @@ class ProblemSpecification(ElementwiseProblem):
             isps = calculate_isp(test_case)
         score = sum(1 for c in isps.values() if c)
 
-        out["F"] = [-int(coverage.expression)]
-        out["G"] = [11 - score]
+        out["F"] = [-int(coverage.expression), -score]
+        # out["G"] = [11 - score]
 
         # try:
         # traces = list(map(lambda tc: tc.traces, decoder.decode_ts(x)))
@@ -148,7 +148,7 @@ algorithm = NSGA2(
     eliminate_duplicates=True
 )
 
-termination = get_termination("n_gen", 50)
+termination = get_termination("n_gen", 20)
 res = minimize(ProblemSpecification(),
                algorithm,
                termination,
