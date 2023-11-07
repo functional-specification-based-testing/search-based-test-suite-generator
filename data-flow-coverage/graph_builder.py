@@ -1,149 +1,7 @@
 import graphviz
-from enum import Enum
+from node import Node, NodeType
+from exp import Exp, ExpType
 import re
-
-
-class Position:
-    line: int
-    char: int
-
-    def __init__(self, position):
-        locations = position.split(':')
-        self.line = int(locations[0])
-        self.char = int(locations[1])
-
-    def __str__(self):
-        return str(self.line) + '-' + str(self.char)
-
-    def __eq__(self, other):
-        return True if other.line == self.line and other.char == self.char else False
-
-    def __le__(self, other):
-        if self == other:
-            return True
-        else:
-            return self < other
-
-    def __lt__(self, other):
-        if self.line < other.line:
-            return True
-        elif self.line == other.line and self.char < other.char:
-            return True
-        else:
-            return False
-
-    def __gt__(self, other):
-        if self.line > other.line:
-            return True
-        elif self.line == other.line and self.char > other.char:
-            return True
-        else:
-            return False
-
-    def __ge__(self, other):
-        if self == other:
-            return True
-        else:
-            return self > other
-
-
-class ExpType(Enum):
-    condition = 1
-    guard = 2
-    expression = 3
-    function_def = 4
-
-
-class Exp:
-    begin: Position
-    end: Position
-    children: []
-    text: str
-    function_name: str
-    exp_type: ExpType
-    father: None
-
-    def __init__(self, string):
-        content = string.strip(",(").split(',')
-        positions = content[0].split('-')
-        self.begin = Position(positions[0])
-        self.end = Position(positions[1])
-        self.children = []
-        self.text = ''
-        self.function_name = ''
-        description = content[1]
-        if 'CondBinBox' in description:
-            self.exp_type = ExpType.condition
-        elif 'GuardBinBox' in description:
-            self.exp_type = ExpType.guard
-        elif 'TopLevelBox' in description:
-            self.exp_type = ExpType.function_def
-            self.function_name = re.findall(r'"([^"]*)"', description)[0]
-        else:
-            self.exp_type = ExpType.expression
-
-    def __str__(self):
-        return self.text + ' \nposition  ' + self.begin.__str__() + ' till ' + self.end.__str__() + '\ntype ' \
-               + self.exp_type.name + ' - ' + self.function_name
-
-    def __repr__(self):
-        return self.__str__()
-
-    def __eq__(self, other):
-        if self.begin == other.begin and self.end == other.end:
-            return True
-        else:
-            return False
-
-    def add_child(self, exp):
-        exp.father = self
-        self.children.append(exp)
-
-    def set_text(self, text):
-        self.text = text
-
-    def contains(self, exp):
-        if self.begin <= exp.begin and exp.end <= self.end:
-            return True
-        else:
-            return False
-
-    def next_child(self, exp):
-        self.children.sort(key=lambda x: x.begin)
-        index = self.children.index(exp)
-        if index == len(self.children):
-            return None
-        else:
-            return self.children[index + 1]
-
-
-class NodeType(Enum):
-    function_def = 1
-    expression = 2
-
-
-class Node:
-    exp: Exp
-    function_name: str
-    next: []
-    node_type: NodeType
-    call: None
-
-    def __init__(self, exp, nodes, node_type=NodeType.expression, function_name=''):
-        self.exp = exp
-        self.next = nodes
-        self.node_type = node_type
-        self.function_name = function_name
-        self.call = None
-
-    def __str__(self):
-        if self.node_type == NodeType.function_def:
-            return self.function_name
-        else:
-            return self.exp.__str__()
-
-    def __repr__(self):
-        return self.__str__()
 
 
 def trim_header(content):
@@ -232,11 +90,22 @@ def get_leaves(root):
     return leaves
 
 
+def get_tags(node):
+    if node is None:
+        return []
+    tags = []
+    tag = re.search('`\\w+`\\s*\\"(.+)\\"', node.exp.text)
+    if tag is not None:
+        tags.append(tag.group())
+    for n in node.next:
+        tags.extend(get_tags(n))
+    return tags
+
+
 # assuming that guard contain only one expression hence the guard expression is in the leaves
 def find_guard_exp(exps):
     guards = []
     for exp in exps:
-        # print("exp type: " + type(exp))
         if exp.exp_type == ExpType.guard:
             guards.append(exp)
     return guards
@@ -250,10 +119,13 @@ def get_cfg(root):
         for guard in guards:
             guard_leaves = get_leaves(guard.father.next_child(guard))
             guard_node = create_cfg(guard_leaves)
-            path.append(Node(guard, [guard_node]))
+            guard_node_tags = get_tags(guard_node)
+            path.append(Node(guard, [guard_node],tags=guard_node_tags))
         return Node(None, path, NodeType.function_def, root.function_name)
     else:
-        return Node(None, [create_cfg(leaves)], NodeType.function_def, root.function_name)
+        function_cfg = create_cfg(leaves)
+        return Node(None, [function_cfg], NodeType.function_def, function_name=root.function_name,
+                    tags=get_tags(function_cfg))
 
 
 def create_cfg(leaves):
@@ -264,19 +136,17 @@ def create_cfg(leaves):
         father = leaf.father
         if_branch = father.next_child(leaf)
         else_branch = father.next_child(if_branch)
-        if_branch_leaves = get_leaves(if_branch)
-        else_branch_leaves = get_leaves(else_branch)
-        if_node = create_cfg(if_branch_leaves)
-        else_node = create_cfg(else_branch_leaves)
-        leaves = [exp for exp in leaves if exp not in get_leaves(if_branch)]
-        leaves = [exp for exp in leaves if exp not in get_leaves(else_branch)]
+        if_node = create_cfg(get_leaves(if_branch))
+        if_node.tags = get_tags(if_node)
+        else_node = create_cfg(get_leaves(else_branch))
+        else_node.tags = get_tags(else_node)
+        leaves = [exp for exp in leaves if exp not in get_leaves(if_branch) and exp not in get_leaves(else_branch)]
         remaining = create_cfg(leaves)
         if_last_node = get_last_node(if_node)
         else_last_node = get_last_node(else_node)
         if_last_node.next = [remaining]
         else_last_node.next = [remaining]
-        node = Node(leaf, [if_node, else_node])
-        return node
+        return Node(leaf, [if_node, else_node])
     elif leaf.exp_type == ExpType.expression:
         return Node(leaf, [create_cfg(leaves)])
 
@@ -304,8 +174,6 @@ def visualize(roots):
     # print(tree.source)
     tree.render('exp_tree', view=True)
     # tree.write_jpeg("exp_tree.jpeg")
-
-
 
 
 def get_functions_graph():

@@ -25,8 +25,8 @@ MAX_SHARE = 20
 VERBOSE = False
 
 algorithm_param = {
-    'max_num_iteration': 1000,
-    'population_size': 100,
+    'max_num_iteration': 2,
+    'population_size': 1,
     'mutation_probability': 0.1,
     'elit_ratio': 0.01,
     'crossover_probability': 0.5,
@@ -40,12 +40,15 @@ def main():
     def fitness(ts_encoded):
         traces = list(map(lambda tc: tc.traces, decoder.decode_ts(ts_encoded)))
         ts_size = len(traces)
-        covered_stmts = set(chain(*traces))
+        print("traces are: " + str(traces))
+        score = sum(traces)
+        print('score is: ' + str(score))
+        # covered_stmts = set(chain(*traces))
         # score = 5 * len(covered_stmts) - 1 * ts_size
-        coverage = get_coverage()
-        score = int(coverage.branch) + int(coverage.statement) + int(coverage.expression)
-        if VERBOSE:
-            print(ts_size, len(covered_stmts), score)
+        # coverage = get_coverage()
+        # score = int(coverage.branch) + int(coverage.statement) + int(coverage.expression)
+        # if VERBOSE:
+        #     print(ts_size, len(covered_stmts), score)
         return int(score)
 
     if len(argv) != 2:
@@ -87,7 +90,7 @@ def main():
     # print("")
     ts = decoder.decode_ts(best_variable)
     print("%d tests" % len(ts))
-    print("%d stmts" % len(set(chain(*map(lambda tc: tc.traces, ts)))))
+    # print("%d stmts" % len(set(chain(*map(lambda tc: tc.traces, ts)))))
     # print("report: %s" % report)
     print("\n\n".join(map(lambda tc: repr(tc), ts)))
     save_test_suite_feed(ts, argv[1])

@@ -32,8 +32,8 @@ class TestCase:
         self.ords = ords
         self.translated_orders = 0
         self.translated = self._translate()
-        # self.traces = self._calc_test_case_trace()
-        self.test_case = self.gen_test_case_feed().split("\n")
+        self.traces = self._calc_test_case_trace()
+        # self.test_case = self.gen_test_case_feed().split("\n")
 
     @staticmethod
     def _translate_new_ord(order):
@@ -111,14 +111,49 @@ class TestCase:
             [self._translate_ord(order) for order in self.ords],
         ], []))
 
+    # use this when you want to count the number of unique traces generated
+    # def _calc_test_case_trace(self):
+    #     with open(TMP_FILE_ADDR, 'w') as f:
+    #         print(self.translated, file=f)
+    #
+    #     process = subprocess.Popen(TRACE_CALC_ADDR + TMP_FILE_ADDR, cwd=WORKING_DIRECTORY, shell=True,
+    #                                stdout=subprocess.PIPE)
+    #     output, error = process.communicate()
+    #     return set(output.decode("utf-8").split())
+
     def _calc_test_case_trace(self):
         with open(TMP_FILE_ADDR, 'w') as f:
             print(self.translated, file=f)
 
-        process = subprocess.Popen(TRACE_CALC_ADDR + TMP_FILE_ADDR, cwd=WORKING_DIRECTORY, shell=True,
-                                   stdout=subprocess.PIPE)
+        process = subprocess.Popen(TRACE_CALC_ADDR + TMP_FILE_ADDR, shell=True,
+                                   stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         output, error = process.communicate()
-        return set(output.decode("utf-8").split())
+        data_flow_coverage = [df for df in output.split(b' ') if df.find(b'DF') != -1 and b'tau' not in df]
+        # data_flow_coverage = []
+        # print(output)
+        # for df in output.split(b' '):
+        #     print(df)
+        #     if df.find(b'DF') != -1:
+        #         if b'tau' not in df:
+        #             print("found a match")
+        #             data_flow_coverage.append(df)
+        print(data_flow_coverage)
+        du_paths = 0
+        credit_def = False
+        ownership_def = False
+        for item in data_flow_coverage:
+            if item == b'DF-D-credit':
+                credit_def = True
+            elif item == b'DF-U-credit' and credit_def:
+                credit_def = False
+                du_paths += 1
+            elif item == b'DF-D-ownership':
+                ownership_def = True
+            elif item == b'DF-U-ownership' and ownership_def:
+                ownership_def = False
+                du_paths += 1
+        print("du_path count: " + str(du_paths))
+        return du_paths
 
     def gen_test_case_feed(self):
         with open(TMP_FILE_ADDR, 'w') as f:
@@ -173,11 +208,11 @@ class ArrayDecoder:
         return None
 
     def decode_ts(self, ts_encoded):
-        process = subprocess.Popen(RESET_COVERAGE, cwd=WORKING_DIRECTORY, shell=True, stdout=subprocess.PIPE)
-        output, error = process.communicate()
-        if error:
-            errors = open("errors.txt", "a")
-            errors.write(str(error) + "\n")
+        # process = subprocess.Popen(RESET_COVERAGE, cwd=WORKING_DIRECTORY, shell=True, stdout=subprocess.PIPE)
+        # output, error = process.communicate()
+        # if error:
+        #     errors = open("errors.txt", "a")
+        #     errors.write(str(error) + "\n")
         ts = []
         for i in range(self.max_ts_size):
             is_in_idx = i * self.tc_encoded_size

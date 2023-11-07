@@ -13,7 +13,6 @@ def connect_function_calls(node, functions):
             node.call = functions[function]
         else:
             call = re.search("^\\(\\w+\\s\\w+", node.exp.text)
-            print(str(call))
             if call is not None:
                 function = re.search('\\w+', node.exp.text).group()
                 node.call = functions[function]
@@ -35,6 +34,7 @@ def visualize_node(node, flow_graph):
     flow_graph.node(node.__str__())
     if node.call is not None:
         flow_graph.edge(node.__str__(), node.call.__str__())
+        flow_graph.edge(node.call.__str__(), node.__str__())
     if None not in node.next:
         for n in node.next:
             flow_graph.edge(node.__str__(), n.__str__())
