@@ -84,18 +84,25 @@ class ProblemSpecification(ElementwiseProblem):
         )
 
     def _evaluate(self, x, out, *args, **kwargs):
-
         test_suite = decoder.decode_ts(x)
-        coverage = get_coverage()
+        du_coverage = 0
+        expression_coverage = 0
+        for tc in test_suite:
+            print('du : ' + tc.traces)
+            print('expression: ' + tc.structural_coverage.expression)
+            du_coverage += int(tc.traces)
+            expression_coverage += int(tc.structural_coverage.expression)
 
-        isps = {}
-        for testcase in test_suite:
-            test_case = Testcase()
-            test_case.parse(testcase.test_case)
-            isps = calculate_isp(test_case)
-        score = sum(1 for c in isps.values() if c)
+        out["F"] = [du_coverage, expression_coverage]
 
-        out["F"] = [-int(coverage.expression), -score]
+        # isps = {}
+        # for testcase in test_suite:
+        #     test_case = Testcase()
+        #     test_case.parse(testcase.test_case)
+        #     isps = calculate_isp(test_case)
+        # score = sum(1 for c in isps.values() if c)
+        #
+        # out["F"] = [-int(coverage.expression), -score]
         # out["G"] = [11 - score]
 
         # try:

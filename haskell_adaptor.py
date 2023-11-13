@@ -2,13 +2,14 @@ import re
 import subprocess
 from dataclasses import dataclass, astuple
 
-TMP_FILE_ADDR = "/tmp/wdajdjkposlf-expression"
+TMP_FILE_ADDR = "/tmp/wdajdjkposlf-du-ob"
 TRACE_CALC_ADDR = "./GetTCTraces --traces "
 TRACE_FEDD_ADDR = "./GetTCTraces --trades "
 COVERAGE_ADDR = "hpc report GetTCTraces"
 RESET_COVERAGE = "rm GetTCTraces.tix"
-
-WORKING_DIRECTORY = "../haskell-matching-engine/dist"
+MOVE_RESULTS = "mv run.out run/"
+DATA_COVERAGE = "./DataCoverage"
+WORKING_DIRECTORY = "."
 
 
 @dataclass
@@ -25,14 +26,16 @@ class Order:
 
 
 class TestCase:
-    def __init__(self, credits, shares, reference_price, ords):
+    def __init__(self, credits, shares, reference_price, ords, index):
         self.credits = credits
         self.shares = shares
         self.reference_price = reference_price
         self.ords = ords
         self.translated_orders = 0
         self.translated = self._translate()
+        self._reset_expression_coverage()
         self.traces = self._calc_test_case_trace()
+        self.structural_coverage = get_coverage()
         # self.test_case = self.gen_test_case_feed().split("\n")
 
     @staticmethod
@@ -129,39 +132,66 @@ class TestCase:
                                    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         output, error = process.communicate()
         data_flow_coverage = [df for df in output.split(b' ') if df.find(b'DF') != -1 and b'tau' not in df]
-        # data_flow_coverage = []
-        # print(output)
-        # for df in output.split(b' '):
-        #     print(df)
-        #     if df.find(b'DF') != -1:
-        #         if b'tau' not in df:
-        #             print("found a match")
-        #             data_flow_coverage.append(df)
-        print(data_flow_coverage)
         du_paths = 0
-        credit_def = False
-        ownership_def = False
+        credit_dict = {}
+        ownership_dict = {}
+        ob_dict = {}
         for item in data_flow_coverage:
-            if item == b'DF-D-credit':
-                credit_def = True
-            elif item == b'DF-U-credit' and credit_def:
-                credit_def = False
-                du_paths += 1
-            elif item == b'DF-D-ownership':
-                ownership_def = True
-            elif item == b'DF-U-ownership' and ownership_def:
-                ownership_def = False
-                du_paths += 1
-        print("du_path count: " + str(du_paths))
+            # print('ciandidate is : ' + str(item))
+            if b'DF-D-credit' in item:
+                id = item.split(b'-')[3].strip()
+                credit_dict[id] = True
+            elif b'DF-U-credit' in item:
+                id = item.split(b'-')[3].strip()
+                if id in credit_dict and credit_dict[id]:
+                    credit_dict[id] = False
+                    du_paths += 1
+            elif b'DF-D-ownership' in item:
+                id = item.split(b'-')[3].strip()
+                ownership_dict[id] = True
+            elif b'DF-U-ownership' in item:
+                id = item.split(b'-')[3].strip()
+                if id in ownership_dict and ownership_dict[id]:
+                    ownership_dict[id] = False
+                    du_paths += 1
+            elif b'DF-D-ob' in item:
+                id = item.split(b'-')[3].strip()
+                ob_dict[id] = True
+            elif b'DF-U-ob' in item:
+                id = item.split(b'-')[3].strip()
+                if id in ob_dict and ob_dict[id]:
+                    ob_dict[id] = False
+                    du_paths += 1
+
+        # print("du_path count: " + str(du_paths))
         return du_paths
 
-    def gen_test_case_feed(self):
+    @staticmethod
+    def _reset_expression_coverage():
+        process = subprocess.Popen(RESET_COVERAGE, cwd=WORKING_DIRECTORY, shell=True, stdout=subprocess.PIPE)
+        output, error = process.communicate()
+        if error:
+            errors = open("errors.txt", "a")
+            errors.write(str(error) + "\n")
+
+    #   the usage of this function is not clear.
+    def gen_test_case_feed(self, index=0):
         with open(TMP_FILE_ADDR, 'w') as f:
             print(self.translated, file=f)
 
-        process = subprocess.Popen(TRACE_FEDD_ADDR + TMP_FILE_ADDR, cwd=WORKING_DIRECTORY, shell=True,
-                                   stdout=subprocess.PIPE)
+        process = subprocess.Popen(TRACE_FEDD_ADDR + TMP_FILE_ADDR, cwd=".", shell=True,
+                                   stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         output, error = process.communicate()
+        # print("output: " + output.decode("utf-8"))
+        self.data_coverage = int(output.decode("utf-8").split("\n")[-3].split(":")[1])
+        print("coverage: " + str(self.data_coverage))
+        # print("original format: " + "\n".join(output.decode("utf-8").split("\n")[:-3]))
+
+        # mv = subprocess.Popen(MOVE_RESULTS + "run" + str(index), cwd=WORKING_DIRECTORY, shell=True,
+        #                       stdout=subprocess.PIPE)
+        # mv_out, mv_error = mv.communicate()
+        # if mv_error:
+        #     print("there is an error in move " + str(mv_error))
         return output.decode("utf-8")
 
     def __repr__(self):
@@ -189,7 +219,7 @@ class ArrayDecoder:
             return False
         return True
 
-    def decode_tc(self, tc_encoded):
+    def decode_tc(self, tc_encoded, index):
         credits = tc_encoded[:self.broker_numbers]
         shares = tc_encoded[self.broker_numbers:self.shareholder_numbers + self.broker_numbers]
         reference_price = tc_encoded[self.shareholder_numbers + self.broker_numbers]
@@ -204,15 +234,10 @@ class ArrayDecoder:
                 continue
             ords.append(order)
         if len(ords) > 0:
-            return TestCase(credits, shares, reference_price, ords)
+            return TestCase(credits, shares, reference_price, ords, index)
         return None
 
     def decode_ts(self, ts_encoded):
-        # process = subprocess.Popen(RESET_COVERAGE, cwd=WORKING_DIRECTORY, shell=True, stdout=subprocess.PIPE)
-        # output, error = process.communicate()
-        # if error:
-        #     errors = open("errors.txt", "a")
-        #     errors.write(str(error) + "\n")
         ts = []
         for i in range(self.max_ts_size):
             is_in_idx = i * self.tc_encoded_size
@@ -222,9 +247,10 @@ class ArrayDecoder:
             tc_encoded = ts_encoded[
                          i * self.tc_encoded_size + 1:(i + 1) * self.tc_encoded_size
                          ]
-            tc = self.decode_tc(tc_encoded)
+            tc = self.decode_tc(tc_encoded, i)
             if tc is not None:
                 ts.append(tc)
+
         return ts
 
 
@@ -246,6 +272,11 @@ def get_coverage():
     coverage.statement = sc[0]
     # print(vars(coverage).items())
     return coverage
+
+
+def get_data_coverage():
+    process = subprocess.Popen(DATA_COVERAGE, cwd=".", shell=True, stdout=subprocess.PIPE)
+    output, error = process.communicate()
 
 
 def gen_test_suite_feed(ts):
