@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 
-from itertools import chain
 from sys import argv, stderr
 
 import numpy as np

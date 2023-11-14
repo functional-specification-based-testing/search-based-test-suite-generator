@@ -8,9 +8,7 @@ from pymoo.factory import get_sampling, get_crossover, get_mutation
 from pymoo.factory import get_termination
 from pymoo.optimize import minimize
 
-from haskell_adaptor import ArrayDecoder, get_coverage, save_test_suite_feed
-from main import Testcase, check_all_isps, isp_list
-from isp_coverage import calculate_isp
+from haskell_adaptor import ArrayDecoder, save_test_suite_feed
 
 MAX_PRICE = 10
 MAX_QTY = 10
@@ -84,7 +82,6 @@ class ProblemSpecification(ElementwiseProblem):
         )
 
     def _evaluate(self, x, out, *args, **kwargs):
-
         test_suite = decoder.decode_ts(x)
         du_coverage = 0
         expression_coverage = 0
