@@ -2,7 +2,7 @@ import re
 import subprocess
 from dataclasses import dataclass, astuple
 
-TMP_FILE_ADDR = "/tmp/wdajdjkposlf-du-ob"
+TMP_FILE_ADDR = "/tmp/wdajdjkposlf-nsga2"
 TRACE_CALC_ADDR = "./GetTCTraces --traces "
 TRACE_FEDD_ADDR = "./GetTCTraces --trades "
 COVERAGE_ADDR = "hpc report GetTCTraces"
@@ -179,19 +179,8 @@ class TestCase:
         with open(TMP_FILE_ADDR, 'w') as f:
             print(self.translated, file=f)
 
-        process = subprocess.Popen(TRACE_FEDD_ADDR + TMP_FILE_ADDR, cwd=".", shell=True,
-                                   stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        process = subprocess.Popen(TRACE_FEDD_ADDR.split() + [TMP_FILE_ADDR], stdout=subprocess.PIPE)
         output, error = process.communicate()
-        # print("output: " + output.decode("utf-8"))
-        self.data_coverage = int(output.decode("utf-8").split("\n")[-3].split(":")[1])
-        print("coverage: " + str(self.data_coverage))
-        # print("original format: " + "\n".join(output.decode("utf-8").split("\n")[:-3]))
-
-        # mv = subprocess.Popen(MOVE_RESULTS + "run" + str(index), cwd=WORKING_DIRECTORY, shell=True,
-        #                       stdout=subprocess.PIPE)
-        # mv_out, mv_error = mv.communicate()
-        # if mv_error:
-        #     print("there is an error in move " + str(mv_error))
         return output.decode("utf-8")
 
     def __repr__(self):

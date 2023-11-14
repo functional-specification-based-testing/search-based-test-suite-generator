@@ -7,7 +7,7 @@ from sys import argv, stderr
 import numpy as np
 from geneticalgorithm import geneticalgorithm as ga
 
-from haskell_adaptor import ArrayDecoder, save_test_suite_feed, get_coverage
+from haskell_adaptor import ArrayDecoder, save_test_suite_feed
 
 MAX_PRICE = 10
 MAX_QTY = 10
@@ -25,8 +25,8 @@ MAX_SHARE = 20
 VERBOSE = False
 
 algorithm_param = {
-    'max_num_iteration': 2,
-    'population_size': 1,
+    'max_num_iteration': 1000,
+    'population_size': 100,
     'mutation_probability': 0.1,
     'elit_ratio': 0.01,
     'crossover_probability': 0.5,

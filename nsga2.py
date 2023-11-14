@@ -8,7 +8,7 @@ from pymoo.factory import get_sampling, get_crossover, get_mutation
 from pymoo.factory import get_termination
 from pymoo.optimize import minimize
 
-from haskell_adaptor import ArrayDecoder, get_coverage, save_test_suite_feed, gen_test_suite_feed
+from haskell_adaptor import ArrayDecoder, get_coverage, save_test_suite_feed
 from main import Testcase, check_all_isps, isp_list
 from isp_coverage import calculate_isp
 
@@ -84,17 +84,19 @@ class ProblemSpecification(ElementwiseProblem):
         )
 
     def _evaluate(self, x, out, *args, **kwargs):
+
         test_suite = decoder.decode_ts(x)
         du_coverage = 0
         expression_coverage = 0
         for tc in test_suite:
-            print('du : ' + tc.traces)
-            print('expression: ' + tc.structural_coverage.expression)
+            # print('du : ' + str(tc.traces))
+            # print('expression: ' + str(tc.structural_coverage.expression))
             du_coverage += int(tc.traces)
             expression_coverage += int(tc.structural_coverage.expression)
 
-        out["F"] = [du_coverage, expression_coverage]
+        out["F"] = [-du_coverage, -expression_coverage]
 
+        #
         # isps = {}
         # for testcase in test_suite:
         #     test_case = Testcase()
