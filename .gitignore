@@ -4,6 +4,7 @@ ga
 nsga2
 
 run-temp.txt
+*.hie
 
 ### Python ###
 
